@@ -2,12 +2,12 @@ import jwt from "jsonwebtoken";
 import User from "../models/User.js";
 import { ENV } from "../lib/env.js";
 
-export const socketAuthMiddleware = async (socketAuthMiddleware, next) => {
+export const socketAuthMiddleware = async (socket, next) => {
     try {
         // external token from http-only cookies
         const token = socket.handshake.headers.cookie
         ?.split("; ")
-        .find((row) => row.startswith("jwt="))
+        .find((row) => row.startsWith("jwt="))
         ?.split("=")[1];
 
         if(!token) {
@@ -23,10 +23,10 @@ export const socketAuthMiddleware = async (socketAuthMiddleware, next) => {
         }
 
         // find the user from db
-        const user = await User.findById(decoded.id);
+        const user = await User.findById(decoded.userId).select("-password");
         if (!user) {
-            console.log("Socket connection rejected: User not found");
-            return next(new Error("User Not Found"));
+        console.log("Socket connection rejected: User not found");
+        return next(new Error("User not found"));
         }
 
         // attach user info to socket
@@ -38,6 +38,6 @@ export const socketAuthMiddleware = async (socketAuthMiddleware, next) => {
 
     } catch (error) {
         console.log("Socket connection error:", error);
-        return next(new Error("Unauthorized - Error verifying token"));
+        next(new Error("Unauthorized - Error verifying token"));
     }
 }
